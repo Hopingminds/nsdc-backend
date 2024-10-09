@@ -1,3 +1,4 @@
+const apiClient = require('../config/axiosConfig.js')
 const axios = require('axios');
 const forge = require('node-forge'); // Import node-forge for encryption (make sure to install it)
 
@@ -11,7 +12,7 @@ let secretKey = '';
 const getCSRFToken = async () => {
   try {
     // Make a HEAD request to fetch the CSRF token and session cookies
-    const response = await axios.head('https://adminservices.skillindiadigital.gov.in/api/user/v1', {
+    const response = await apiClient.head('/api/user/v1', {
       withCredentials: true, // Include credentials to send/receive cookies
     });
 
@@ -30,7 +31,7 @@ const getCSRFToken = async () => {
 const getPublicKeyAndSecret = async () => {
   try {
     // Make a GET request to fetch the public key and secret key
-    const response = await axios.get('https://adminservices.skillindiadigital.gov.in/api/user/v1/getkey', {
+    const response = await apiClient.get('/api/user/v1/getkey', {
       withCredentials: true,
     });
 
@@ -85,8 +86,8 @@ const getLogin = async (req, res) => {
     };
 
     // Make the POST request to the login endpoint, including credentials to send the cookie
-    const loginResponse = await axios.post(
-      'https://adminservices.skillindiadigital.gov.in/api/user/v1/login',
+    const loginResponse = await apiClient.post(
+      '/api/user/v1/login',
       JSON.stringify(loginData),
       { headers, withCredentials: true }
     );
