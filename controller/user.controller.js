@@ -1,11 +1,11 @@
-// controllers/userController.js
-const user = require('../models/user.modal'); // Adjust the path as needed
-const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const forge = require('node-forge'); // Import node-forge for encryption (make sure to install it)
 
-// Variable to store the CSRF token and session cookie globally
+// Variables to store the CSRF token, session cookie, public key, and secret key globally
 let csrfToken = '';
 let sessionCookies = '';
+let publicKey = '';
+let secretKey = '';
 
 // Function to get the CSRF token and session cookies
 const getCSRFToken = async () => {
@@ -24,42 +24,80 @@ const getCSRFToken = async () => {
     console.log('Session Cookies:', sessionCookies);
   } catch (error) {
     console.error('Error fetching CSRF token:', error.message);
+    throw new Error('Failed to fetch CSRF token');
   }
+};
+
+// Function to fetch the public key and secret key dynamically
+const getPublicKeyAndSecret = async () => {
+  try {
+    // Make a GET request to fetch the public key and secret key
+    const response = await axios.get('https://adminservices.skillindiadigital.gov.in/api/user/v1/getkey', {
+      withCredentials: true,
+    });
+
+    // Capture the public key and secret key from response data
+    publicKey = response.data.publicKey;
+    secretKey = response.data.secret;
+
+    console.log('Public Key fetched:', publicKey);
+    console.log('Secret Key fetched:', secretKey);
+  } catch (error) {
+    console.error('Error fetching public key and secret:', error.message);
+    throw new Error('Failed to fetch public key and secret');
+  }
+};
+
+// Function to encrypt the password using the provided public key
+const encryptPassword = (publicKeyPem, password, secret) => {
+  const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+  const encryptedPassword = publicKey.encrypt(password, 'RSA-OAEP', {
+    md: forge.md.sha256.create(),
+  });
+  return forge.util.encode64(encryptedPassword) + secret;
 };
 
 // Function to handle the login request
 const getLogin = async (req, res) => {
-  // Ensure the CSRF token and session cookies are fetched before making the login request
-  await getCSRFToken();
+  const { tpId, password } = req.body; // Destructure tpId and password from request body
 
-  // Define login data using environment variables for sensitive information
-  const data = {
-    userName: "TP143127",
-    password: "QaLnSzvjmTbH/kVEfsaso6XIpQLppurV3I4Yu/TlvWdxvpCg6eiekY+K8TL3lAme5R2+FMAd3qjDXN6Vu0xxPVJ6UzUoINfCb8nQSE10w/ZvWMNbShp+I9LDp/UnDeg8xnsOGqxOl3h9z/FsE/Nq6H5OfUEYp+aAlA/B9Iuv+Ou6AdgSBEbMMrbe4xwoibpQhRL2gwNPsV0mln3wgD18apK2fF1PLBdP4oK1He9pT9r4cv2Rp1QBayNw9XZ87ojJahY3mlu6ulfMooHsicp4cZvL8uSDafHhH+u5lRTN4fUj4MF9iO83gjCNmFZww7ygOTeur1RGhvK/YEPhM+n6dD1ZcNKISingoWDpl1hHJ4WmO7plJfyz9ZUGE6gvPDfpidA3prJMvr7/fjuPK5/Jn2aUUMpwdYXWmy4QCCp3t55ca4av+vqmB1WWlw5P6BUquq7FdkU7LeYU8e+NKuRIcfV3f61XPzwErE87Qp2c0jIAg7MtOBm+smFzu4AG6cQPVKbzNShZkLvbbnzfc02ntquC1a+gRabhzlDsuUpvZDw2FGX152h4xEIrlUYigUwOqATaYXk6m2gRXoRfF2ohta+gtjuvdQ2a2gVaCFlwfXCyEiwJGn/rm/w2hzMzYnwirkr+0Th4RNXF7y6kGeTQCzkLhNau5bDjJgierWvgfkU=5db3J",
-  };
-
-  // Check if the CSRF token was fetched successfully
-  if (!csrfToken) {
-    return res.status(500).json({ message: 'Failed to retrieve CSRF token' });
-  }
-
-  // Define headers with the CSRF token and session cookies
-  const headers = {
-    'X-Csrf-Token': csrfToken,
-    'Content-Type': 'application/json',
-    'Cookie': sessionCookies, // Include session cookies captured during CSRF token fetch
-  };
-  console.log(JSON.stringify(data))
   try {
-    // Make the POST request to the login endpoint, include credentials to send the cookie
-    const response = await axios.post(
+    // Ensure the CSRF token and session cookies are fetched before making the login request
+    await getCSRFToken();
+
+    // Ensure the public key and secret key are fetched before making the login request
+    await getPublicKeyAndSecret();
+
+    // If any of the required values were not successfully fetched, return an error
+    if (!csrfToken || !sessionCookies || !publicKey || !secretKey) {
+      return res.status(500).json({ message: 'Failed to retrieve CSRF token, session cookies, public key, or secret key' });
+    }
+
+    // Encrypt the password using the dynamically fetched public key and secret key
+    const encryptedPassword = encryptPassword(publicKey, password, secretKey);
+    console.log(encryptedPassword,'encryptedPassword')
+    // Prepare login data
+    const loginData = {
+      userName: tpId,
+      password: encryptedPassword,
+    };
+
+    // Define headers with the CSRF token and session cookies
+    const headers = {
+      'X-Csrf-Token': csrfToken,
+      'Content-Type': 'application/json',
+      'Cookie': sessionCookies, // Include session cookies captured during CSRF token fetch
+    };
+
+    // Make the POST request to the login endpoint, including credentials to send the cookie
+    const loginResponse = await axios.post(
       'https://adminservices.skillindiadigital.gov.in/api/user/v1/login',
-      JSON.stringify(data),
-      { headers, withCredentials: true } // Include credentials to send cookies with the request
+      JSON.stringify(loginData),
+      { headers, withCredentials: true }
     );
 
     // Send the successful response back to the client
-    res.json({ message: response.data });
+    return res.json({ message: loginResponse.data ,csrfToken,sessionCookies });
   } catch (error) {
     console.error('Login Error:', error.message);
 
@@ -68,27 +106,9 @@ const getLogin = async (req, res) => {
     const errorMessage = error.response ? error.response.data : 'Login failed. Please try again later.';
 
     // Send the error response back to the client
-    res.status(statusCode).json({ message: errorMessage });
+    return res.status(statusCode).json({ message: errorMessage});
   }
 };
-
-
-
-
-  const getSecretKey = async (req, res) => {
-    axios.get('https://backend.itrackglobal.com/api/user/v1/getkey')
-    .then(response => {
-        console.log(response.headers); // Handle the response data here
-        res.json({ message: response.headers })
-    })
-    .catch(error => {
-        console.error('Error making GET request:', error);
-    });
-};
-
-
 module.exports = {
-    getCSRFToken,
-    getSecretKey,
-    getLogin,
+  getLogin,
 };
