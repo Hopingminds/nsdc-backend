@@ -17,11 +17,9 @@ const getCSRFToken = async () => {
 
     // Capture the CSRF token from response headers
     csrfToken = response.headers['x-csrf-token'];
-    console.log('CSRF Token fetched:', csrfToken);
 
     // Capture session cookies from the response
     sessionCookies = response.headers['set-cookie'] ? response.headers['set-cookie'].join('; ') : '';
-    console.log('Session Cookies:', sessionCookies);
   } catch (error) {
     console.error('Error fetching CSRF token:', error.message);
     throw new Error('Failed to fetch CSRF token');
@@ -40,8 +38,6 @@ const getPublicKeyAndSecret = async () => {
     publicKey = response.data.publicKey;
     secretKey = response.data.secret;
 
-    console.log('Public Key fetched:', publicKey);
-    console.log('Secret Key fetched:', secretKey);
   } catch (error) {
     console.error('Error fetching public key and secret:', error.message);
     throw new Error('Failed to fetch public key and secret');
@@ -75,7 +71,6 @@ const getLogin = async (req, res) => {
 
     // Encrypt the password using the dynamically fetched public key and secret key
     const encryptedPassword = encryptPassword(publicKey, password, secretKey);
-    console.log(encryptedPassword,'encryptedPassword')
     // Prepare login data
     const loginData = {
       userName: tpId,
