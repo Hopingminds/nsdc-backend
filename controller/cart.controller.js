@@ -1,3 +1,4 @@
+const cart = require('../models/cart.modal');
 const axios = require('axios');
 const XLSX = require('xlsx');
 const fs = require('fs');
@@ -27,6 +28,9 @@ const createStudent = async (req, res) => {
     // Convert sheet to JSON format
     const studentsData = XLSX.utils.sheet_to_json(sheet);
 
+    // Log the extracted data to ensure correctness
+    console.log('Extracted Students Data:', studentsData);
+
     // Define headers for the API requests
     const headers = {
       'Content-Type': 'application/json',
@@ -46,14 +50,23 @@ const createStudent = async (req, res) => {
 
       // Process each student in the current batch
       const batchPromises = batch.map(async (student) => {
+        // Ensure required fields are present
+        if (!student.firstName || !student.gender || !student.dob || !student.email || !student.phone) {
+          results.push({
+            message: 'Missing required student fields',
+            student,
+          });
+          return;
+        }
+
         const data = {
           personalDetails: {
             namePrefix: student.namePrefix || "Mr",
             firstName: student.firstName,
             gender: student.gender,
             dob: student.dob,
-            fatherName: student.fatherName,
-            guardianName: student.guardianName
+            fatherName: student.fatherName || 'Unknown',
+            guardianName: student.guardianName || 'Unknown'
           },
           contactDetails: {
             email: student.email,
@@ -63,11 +76,22 @@ const createStudent = async (req, res) => {
         };
 
         try {
+          // Make API call to register the candidate
           const response = await axios.post(
             'https://backend.itrackglobal.com/api/user/v1/register/Candidate/v1',
             data,
             { headers, withCredentials: true }
           );
+
+          // If the API call is successful, store the student data in the database
+          const studentRecord = new cart({
+            candidateId: response.data.candidateId, // Ensure candidateId is correctly assigned
+            ...data,
+            registrationResponse: response.data,
+          });
+
+          await studentRecord.save(); // Save the student data in the database
+
           results.push({ message: 'Student registered successfully', data: response.data, student });
         } catch (error) {
           console.error('Error in API call:', error);
@@ -97,6 +121,7 @@ const createStudent = async (req, res) => {
     }
   }
 };
+
 
 module.exports = {
   createStudent,
