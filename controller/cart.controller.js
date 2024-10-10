@@ -1,98 +1,103 @@
 const axios = require('axios');
-
-// Variable to store the CSRF token and session cookie globally
-let csrfToken = '';
-let sessionCookies = '';
-
-// Function to get the CSRF token and session cookies
-const getCSRFToken = async () => {
-  try {
-    // Make a HEAD request to fetch the CSRF token and session cookies
-    const response = await axios.head('https://adminservices.skillindiadigital.gov.in/api/user/v1', {
-      withCredentials: true, // Include credentials to send/receive cookies
-    });
-
-    // Capture the CSRF token from response headers
-    csrfToken = response.headers['x-csrf-token'];
-    console.log('CSRF Token fetched:', csrfToken);
-
-    // Capture session cookies from the response
-    sessionCookies = response.headers['set-cookie'] ? response.headers['set-cookie'].join('; ') : '';
-    console.log('Session Cookies:', sessionCookies);
-  } catch (error) {
-    console.error('Error fetching CSRF token:', error.message);
-    throw new Error('Failed to retrieve CSRF token and session cookies');
-  }
-};
+const XLSX = require('xlsx');
+const fs = require('fs');
 
 // Function to create a new student
 const createStudent = async (req, res) => {
   try {
-    // Ensure the CSRF token and session cookies are fetched before making the POST request
-    await getCSRFToken();
+    const csrfToken = req.headers['x-csrf-token'] || req.headers['csrfToken'];
+    const sessionCookies = req.headers['set-cookie'] || req.headers['sessionCookies'];
+    const token = req.headers['authorization'] || req.headers['Authorization'] || req.headers['token'];
 
-    // Define the student registration data
-    const data = { 
-      "personalDetails": { 
-        "namePrefix": "Mr", 
-        "firstName": "ABC", 
-        "gender": "Male", 
-        "dob": "2005-03-01T00:00:00.000Z", 
-        "fatherName": "PQRS", 
-        "guardianName": "LSMN" 
-      }, 
-      "contactDetails": { 
-        "email": "gan121j754@gmail.com", 
-        "phone": 9662868385, 
-        "countryCode": "+91" 
-      } 
-    };
-
-    // Check if CSRF token and session cookies were successfully fetched
-    if (!csrfToken || !sessionCookies) {
-      return res.status(500).json({ message: 'Failed to retrieve CSRF token or session cookies' });
+    if (!csrfToken || !sessionCookies || !token) {
+      return res.status(400).json({ message: 'Required headers are missing' });
     }
 
-    // Retrieve the Authorization token from environment variables
-    const token = process.env.AUTH_TOKEN;
-
-    // Check if the token is correctly provided
-    if (!token) {
-      return res.status(500).json({ message: 'Authorization token not provided' });
+    // Read the Excel file from the request
+    const file = req.file; // Assuming the file is uploaded as a multipart form-data
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Log the Authorization header to ensure correctness
-    console.log('Authorization Header:', `Bearer ${token}`);
+    // Read the Excel file using XLSX and convert it to JSON
+    const workbook = XLSX.readFile(file.path); // Read file from path or use file.buffer
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
 
-    // Define headers for the POST request
+    // Convert sheet to JSON format
+    const studentsData = XLSX.utils.sheet_to_json(sheet);
+
+    // Define headers for the API requests
     const headers = {
-      'X-Csrf-Token': csrfToken, // CSRF token retrieved earlier
-      'Authorization': `${token}`, // Properly format the Authorization header with Bearer keyword
       'Content-Type': 'application/json',
-      'Cookie': sessionCookies // Include session cookies captured during CSRF token fetch
+      'x-csrf-token': csrfToken,
+      'Authorization': token,
+      'Cookie': sessionCookies
     };
 
-    // Make the POST request to register a new candidate
-    const response = await axios.post(
-      'https://adminservices.skillindiadigital.gov.in/api/user/v1/register/Candidate/v1', 
-      JSON.stringify(data), 
-      { headers, withCredentials: true } // Include credentials to send cookies with the request
-    );
+    // Use a results array to capture success and failure messages
+    const results = [];
 
-    // Send the successful response back to the client
-    res.json({ message: response.data });
+    // Process students in batches to handle large Excel files
+    const batchSize = 10; // Number of students to process in parallel (adjust as needed)
+
+    for (let i = 0; i < studentsData.length; i += batchSize) {
+      const batch = studentsData.slice(i, i + batchSize);
+
+      // Process each student in the current batch
+      const batchPromises = batch.map(async (student) => {
+        const data = {
+          personalDetails: {
+            namePrefix: student.namePrefix || "Mr",
+            firstName: student.firstName,
+            gender: student.gender,
+            dob: student.dob,
+            fatherName: student.fatherName,
+            guardianName: student.guardianName
+          },
+          contactDetails: {
+            email: student.email,
+            phone: student.phone,
+            countryCode: (student.countryCode || "+91").toString()
+          }
+        };
+
+        try {
+          const response = await axios.post(
+            'https://backend.itrackglobal.com/api/user/v1/register/Candidate/v1',
+            data,
+            { headers, withCredentials: true }
+          );
+          results.push({ message: 'Student registered successfully', data: response.data, student });
+        } catch (error) {
+          console.error('Error in API call:', error);
+          results.push({
+            message: error.response?.data?.message || 'An error occurred during student registration',
+            error: error.response?.data,
+            student,
+          });
+        }
+      });
+
+      // Wait for the batch to complete before moving to the next batch
+      await Promise.all(batchPromises);
+    }
+
+    // Send all results back in response
+    res.json({ results });
   } catch (error) {
-    console.error('Error creating student:', error.message);
-
-    // Handle errors gracefully, checking if the error response exists
-    const statusCode = error.response ? error.response.status : 500;
-    const errorMessage = error.response ? error.response.data : 'Student creation failed. Please try again later.';
-
-    // Send the error response back to the client
-    res.status(statusCode).json({ message: errorMessage });
+    console.error('Error in createStudent function:', error);
+    res.status(500).json({ message: 'An internal server error occurred', error: error.message });
+  } finally {
+    // Optional: Clean up uploaded file after processing
+    if (req.file && req.file.path) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
+    }
   }
 };
 
 module.exports = {
-  createStudent
+  createStudent,
 };
