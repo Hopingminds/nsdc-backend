@@ -4,7 +4,7 @@ const cors = require('cors');
 const connectDB = require('./db');
 const userRouter = require('./router/user.router');
 const userCart = require('./router/cart.router');
-
+const batchRouter=require('./router/batch.router');
 const app = express();
 
 const corsOptions = {
@@ -24,7 +24,7 @@ app.use(express.json());
 // Routes
 app.use('/api/users', userRouter);
 app.use('/api/cart', userCart);
-
+app.use('/api/batch', batchRouter);
 // Connect to the database
 connectDB();
 
