@@ -7,7 +7,8 @@ const fs = require('fs');
 const createStudent = async (req, res) => {
   try {
     const csrfToken = req.headers['x-csrf-token'] || req.headers['csrfToken'];
-    const sessionCookies = req.headers['set-cookie'] || req.headers['sessionCookies'];
+    const {sessionCookies} = req.body;
+    console.log(sessionCookies,'sessionCookies')
     const token = req.headers['authorization'] || req.headers['Authorization'] || req.headers['token'];
 
     if (!csrfToken || !sessionCookies || !token) {
