@@ -5,10 +5,11 @@ const connectDB = require('./db');
 const userRouter = require('./router/user.router');
 const userCart = require('./router/cart.router');
 const batchRouter=require('./router/batch.router');
+const assesmentRouter=require('./router/assesment.router')
 const app = express();
 
 const corsOptions = {
-  origin: ['http://localhost:3001', 'https://your-frontend-domain.com'], // Add your frontend URLs here
+  origin: ['http://localhost:3001', 'https://your-frontend-domain.com','http://localhost:5173'], // Add your frontend URLs here
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify the allowed methods
   allowedHeaders: ['Content-Type'], // Specify the allowed headers
   credentials: true, // Allow credentials (cookies, authorization headers, etc.)
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use('/api/users', userRouter);
 app.use('/api/cart', userCart);
 app.use('/api/batch', batchRouter);
+app.use('/api/assesment', assesmentRouter);
 // Connect to the database
 connectDB();
 
