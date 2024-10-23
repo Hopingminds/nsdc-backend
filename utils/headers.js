@@ -3,7 +3,7 @@
 const getHeaders = (req) => {
   // Extract necessary headers from the request
   const csrfToken = req.headers['x-csrf-token'] || req.headers['csrfToken'];
-  const sessionCookies = req.headers['set-cookie'] || req.headers['sessionCookies'];
+  const {sessionCookies} = req.body;
   const token = req.headers['authorization'] || req.headers['Authorization'] || req.headers['token'];
 
   if (!csrfToken || !sessionCookies || !token) {

@@ -3,6 +3,6 @@ const express=require('express')
 const batchRouter=express.Router();
 
 
-batchRouter.get('/createBatch',createBatch);
+batchRouter.post('/createBatch',createBatch);
 
 module.exports=batchRouter

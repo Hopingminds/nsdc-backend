@@ -1,31 +1,30 @@
 const axios = require('axios');
 const getHeaders = require('../utils/headers');
 const apiClient = require('../config/axiosConfig.js')
+const batch=require("../models/batch.modal.js")
 
 // Function to create a batch
 const createBatch = async (req, res) => {
     try {
-        // Use the getHeaders utility to get headers from the request
         const headers = getHeaders(req);
-        console.log("Headers:", headers);  // Log the headers to verify
-
+        const { batchName, size, batchStartDate, batchEndDate, courseId, trainingHoursPerDay, batchStartTime, batchEndTime, totalFees, assessmentStartDate, assessmentEndDate, tcId, tpId } = req.body;
         const response = await apiClient.post(
-            '/api/batch/v1/create',
+            'api/batch/v1/create',
             {
-                batchName: "Testing Batch",
-                size: 1,
-                batchStartDate: "2024-09-10T00:00:00Z",
-                batchEndDate: "2024-11-10T00:00:00Z",
-                courseId: "FeeSchCor_50620",
-                trainingHoursPerDay: 1,
-                batchStartTime: "2024-09-10T02:30:00Z",
-                batchEndTime: "2024-11-10T03:30:00Z",
+                batchName,
+                size,
+                batchStartDate,
+                batchEndDate,
+                courseId,
+                trainingHoursPerDay,
+                batchStartTime,
+                batchEndTime,
                 batchFee: {
-                    totalFees: 1000
+                    totalFees
                 },
                 feePaidBy: "Self-Paid",
-                assessmentStartDate: "2024-11-10T00:00:00Z",
-                assessmentEndDate: "2024-11-10T00:00:00Z",
+                assessmentStartDate,
+                assessmentEndDate,
                 assessmentMode: "Self",
                 batchType: "Regular",
                 type: "Fee Based",
@@ -34,20 +33,25 @@ const createBatch = async (req, res) => {
                     id: 1,
                     scheme: "Fee Based"
                 },
-                schemeId: "44589",
-                schemeReferenceId: "123456TESTING",
+                schemeId: "33293",
+                schemeReferenceId: "Scheme_1159",
                 schemeType: "feeBased",
-                tpId: "TP200988",
-                tcId: "TC357445",
+                tpId,
+                tcId,
                 createdSource: "Created for NSDC Academy Partners"
             },
             { headers }
         );
+        
+        const newBatch = new Batch({
+            batchId:response.data.batchId,
+            batchName:response.data.batchName
+        });
 
-        // Send back the response from the API
+        await newBatch.save();
+
         res.status(200).json(response.data);
     } catch (error) {
-        // Handle errors and send a proper response
         console.log("Error:", error.response?.data || error.message);
         res.status(500).json({ error: error.response?.data || error.message });
     }
