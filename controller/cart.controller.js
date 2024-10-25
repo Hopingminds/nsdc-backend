@@ -124,6 +124,37 @@ const createStudent = async (req, res) => {
 };
 
 
+const getStudents = async (req, res) => {
+  try {
+    // Get pagination parameters from the request query, with defaults for page and limit
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Query the database for all students with pagination
+    const students = await cart.find().skip(skip).limit(limit);
+    const totalStudents = await cart.countDocuments(); // Get the total count for pagination info
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalStudents / limit);
+
+    res.json({
+      students,
+      pagination: {
+        totalStudents,
+        currentPage: page,
+        totalPages,
+        limit,
+      },
+    });
+  } catch (error) {
+    console.error('Error in getStudents function:', error);
+    res.status(500).json({ message: 'An internal server error occurred', error: error.message });
+  }
+};
+
 module.exports = {
   createStudent,
+  getStudents,
 };
+
