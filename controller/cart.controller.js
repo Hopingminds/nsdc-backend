@@ -2,19 +2,13 @@ const cart = require('../models/cart.modal');
 const axios = require('axios');
 const XLSX = require('xlsx');
 const fs = require('fs');
+const getHeaders = require('../utils/headers');
 
 // Function to create a new student
 const createStudent = async (req, res) => {
   try {
-    const csrfToken = req.headers['x-csrf-token'] || req.headers['csrfToken'];
-    const {sessionCookies} = req.body;
-    console.log(sessionCookies,'sessionCookies')
-    const token = req.headers['authorization'] || req.headers['Authorization'] || req.headers['token'];
-
-    if (!csrfToken || !sessionCookies || !token) {
-      return res.status(400).json({ message: 'Required headers are missing' });
-    }
-
+    const headers = getHeaders(req);
+   
     // Read the Excel file from the request
     const file = req.file; // Assuming the file is uploaded as a multipart form-data
     if (!file) {
@@ -32,14 +26,7 @@ const createStudent = async (req, res) => {
     // Log the extracted data to ensure correctness
     console.log('Extracted Students Data:', studentsData);
 
-    // Define headers for the API requests
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-csrf-token': csrfToken,
-      'Authorization': token,
-      'Cookie': sessionCookies
-    };
-
+ 
     // Use a results array to capture success and failure messages
     const results = [];
 
