@@ -10,6 +10,10 @@ const batchSchema = new mongoose.Schema({
   batchName: {
     type: String,
     required: true
+  },
+  assessmentStatus: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

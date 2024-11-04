@@ -163,21 +163,37 @@ const createAssesment = async (req, res) => {
 // Function to get all batches from the database
 const getAllBatches = async (req, res) => {
     try {
-        // Find all batches in the database
-        const batches = await Batch.find();
+        // Get the page and limit from query parameters or set defaults
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        // Calculate the number of documents to skip
+        const skip = (page - 1) * limit;
+
+        // Fetch batches with pagination
+        const batches = await Batch.find().skip(skip).limit(limit);
+
+        // Get the total count of documents for pagination details
+        const totalBatches = await Batch.countDocuments();
 
         // If no batches found, return a 404 status
         if (batches.length === 0) {
             return res.status(404).json({ message: 'No batches found' });
         }
 
-        // Return all batch details
-        res.status(200).json(batches);
+        // Return paginated batch details
+        res.status(200).json({
+            totalBatches,
+            page,
+            totalPages: Math.ceil(totalBatches / limit),
+            batches
+        });
     } catch (error) {
         console.log("Error:", error.message);
         res.status(500).json({ error: error.message });
     }
 };
+
 
 const createCertificate = async (req, res) => {
     try {
