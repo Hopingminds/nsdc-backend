@@ -48,6 +48,11 @@ const createStudent = async (req, res) => {
           return;
         }
 
+        // Parse courses from the Excel data (assuming a comma-separated string in the "cource" column)
+        const courses = student.cource
+          ? student.cource.split(',').map((course) => ({ courceName: course.trim() }))
+          : []; // Default to an empty array if no courses are listed
+        console.log(courses,'courses')
         const data = {
           personalDetails: {
             namePrefix: student.namePrefix || "Mr",
@@ -55,7 +60,8 @@ const createStudent = async (req, res) => {
             gender: student.gender,
             dob: student.dob,
             fatherName: student.fatherName || 'Unknown',
-            guardianName: student.guardianName || 'Unknown'
+            guardianName: student.guardianName || 'Unknown',
+            cource: courses // Add parsed course list here
           },
           contactDetails: {
             email: student.email,
@@ -66,11 +72,14 @@ const createStudent = async (req, res) => {
 
         try {
           // Make API call to register the candidate
-          const response = await apiClient('/api/user/v1/register/Candidate/v1','POST',
+          const response = await apiClient({
+            url: '/api/user/v1/register/Candidate/v1',
+            method: 'POST',
             data,
-            { headers, withCredentials: true }
-          );
-
+            headers,
+            withCredentials: true
+          });
+          
           // If the API call is successful, store the student data in the database
           const studentRecord = new cart({
             candidateId: response.data.candidateId, // Ensure candidateId is correctly assigned
@@ -82,7 +91,7 @@ const createStudent = async (req, res) => {
 
           results.push({ message: 'Student registered successfully', data: response.data, student });
         } catch (error) {
-          console.error('Error in API call:', error);
+          // console.error('Error in API call:', error);
           results.push({
             message: error.response?.data?.message || 'An error occurred during student registration',
             error: error.response?.data,

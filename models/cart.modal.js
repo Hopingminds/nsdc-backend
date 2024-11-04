@@ -1,4 +1,3 @@
-// src/cartModel.js
 const mongoose = require('mongoose');
 
 const cartItemSchema = new mongoose.Schema({
@@ -9,6 +8,7 @@ const cartItemSchema = new mongoose.Schema({
     dob: { type: Date, required: true },
     fatherName: { type: String, required: true },
     guardianName: { type: String, required: false },
+    cource: [{ courceName: { type: String, required: true } }]  // Allow an array of objects with `courceName`
   },
   contactDetails: {
     email: { type: String, required: true },
