@@ -249,6 +249,25 @@ const downloadCertificate = async (req, res) => {
     }
 };
 
+const deleteBatch = async (req, res) => {
+    try {
+        const { _id } = req.body; // Get batchId from request parameters
+
+        const deletedBatch = await Batch.findOneAndDelete({ _id: _id });
+
+        // If no batch is found, return a 404 error
+        if (!deletedBatch) {
+            return res.status(404).json({ message: 'Batch not found' });
+        }
+
+        // Return a success message if batch is deleted
+        res.status(200).json({ message: 'Batch deleted successfully' });
+    } catch (error) {
+        console.log("Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+};
 
 
-module.exports = { createBatch, getAllBatches, enrollCandidate, createAssesment, createCertificate, downloadCertificate };
+
+module.exports = { createBatch, getAllBatches, enrollCandidate, createAssesment, createCertificate, downloadCertificate , deleteBatch };

@@ -3,9 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./db');
 const userRouter = require('./router/user.router');
-const userCart = require('./router/cart.router');
+const studentRouter = require('./router/student.router');
 const batchRouter=require('./router/batch.router');
-const assesmentRouter=require('./router/assesment.router')
 const app = express();
 
 const corsOptions = {
@@ -16,6 +15,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight requests
+
 
 
 // Middleware
@@ -24,9 +25,8 @@ app.use(express.json());
 
 // Routes
 app.use('/api/users', userRouter);
-app.use('/api/cart', userCart);
+app.use('/api/cart', studentRouter);
 app.use('/api/batch', batchRouter);
-app.use('/api/assesment', assesmentRouter);
 // Connect to the database
 connectDB();
 

@@ -1,4 +1,4 @@
-const apiClient = require('../config/axiosConfig.js')
+const apiClient = require('../config/axiosConfig.js.js')
 const axios = require('axios');
 const forge = require('node-forge'); // Import node-forge for encryption (make sure to install it)
 

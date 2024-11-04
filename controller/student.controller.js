@@ -3,6 +3,7 @@ const axios = require('axios');
 const XLSX = require('xlsx');
 const fs = require('fs');
 const getHeaders = require('../utils/headers');
+const apiClient=require("../config/axiosConfig.js")
 
 // Function to create a new student
 const createStudent = async (req, res) => {
@@ -65,8 +66,7 @@ const createStudent = async (req, res) => {
 
         try {
           // Make API call to register the candidate
-          const response = await axios.post(
-            'https://backend.itrackglobal.com/api/user/v1/register/Candidate/v1',
+          const response = await apiClient('/api/user/v1/register/Candidate/v1','POST',
             data,
             { headers, withCredentials: true }
           );
