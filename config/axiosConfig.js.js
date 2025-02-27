@@ -3,7 +3,7 @@ const axios = require('axios');
 
 // Create an Axios instance with a global base URL
 const apiClient = axios.create({
-  baseURL: process.env.baseURL, 
+  baseURL: process.env.BaseUrl, 
   headers: {
     'Content-Type': 'application/json',
   },
