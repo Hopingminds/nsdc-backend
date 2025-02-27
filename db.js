@@ -1,7 +1,7 @@
 // db.js
 const mongoose = require('mongoose');
 
-const MONGO_URI = 'mongodb+srv://anuj:anuj@cluster0.c7osm.mongodb.net/';
+const MONGO_URI = process.env.DATABASE_URL;
 
 const connectDB = async () => {
     try {
