@@ -12,7 +12,7 @@ const createBatch = async (req, res) => {
             'api/batch/v1/create',
             {
                 batchName,
-                size,
+                size: Number(size), // Ensure size is an integer
                 batchStartDate,
                 batchEndDate,
                 courseId,
