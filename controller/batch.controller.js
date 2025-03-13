@@ -16,11 +16,11 @@ const createBatch = async (req, res) => {
                 batchStartDate,
                 batchEndDate,
                 courseId,
-                trainingHoursPerDay,
+                trainingHoursPerDay:parseFloat(trainingHoursPerDay),
                 batchStartTime,
                 batchEndTime,
                 batchFee: {
-                    totalFees
+                    totalFees:parseInt(totalFees, 10)
                 },
                 feePaidBy: "Self-Paid",
                 assessmentStartDate,
