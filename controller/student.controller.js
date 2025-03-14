@@ -5,6 +5,29 @@ const fs = require('fs');
 const getHeaders = require('../utils/headers');
 const apiClient=require("../config/axiosConfig.js")
 
+const convertExcelDate = (excelDate) => {
+  if (!excelDate) return null; // 🛑 Handle empty/null values
+
+  if (typeof excelDate === "string") {
+    const parsedDate = new Date(excelDate);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString(); // 🟢 Valid string date
+    }
+    return null; // 🛑 Invalid date string
+  }
+
+  if (typeof excelDate === "number" && excelDate > 0) {
+    const date = new Date((excelDate - 25569) * 86400 * 1000); // 🟢 Convert Excel serial date
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+
+  return null; // 🛑 Invalid date fallback
+};
+
+
+
 // Function to create a new student
 const createStudent = async (req, res) => {
   try {
@@ -22,7 +45,9 @@ const createStudent = async (req, res) => {
     const sheet = workbook.Sheets[sheetName];
 
     // Convert sheet to JSON format
-    const studentsData = XLSX.utils.sheet_to_json(sheet);
+    const studentsData = XLSX.utils.sheet_to_json(sheet, {
+      raw: false, // Ensures dates are read as formatted strings
+    });
 
     // Log the extracted data to ensure correctness
     console.log('Extracted Students Data:', studentsData);
@@ -47,7 +72,13 @@ const createStudent = async (req, res) => {
           });
           return;
         }
+        const formattedDob = convertExcelDate(student.dob);
 
+        if (!formattedDob) {
+          results.push({ message: "Invalid DOB format", student });
+          return;
+        }
+        
         // Parse courses from the Excel data (assuming a comma-separated string in the "cource" column)
         const courses = student.cource
           ? student.cource.split(',').map((course) => ({ courceName: course.trim() }))
@@ -58,7 +89,7 @@ const createStudent = async (req, res) => {
             namePrefix: student.namePrefix || "Mr",
             firstName: student.firstName,
             gender: student.gender,
-            dob: student.dob,
+            dob:formattedDob,
             fatherName: student.fatherName || 'Unknown',
             guardianName: student.guardianName || 'Unknown',
             cource: courses // Add parsed course list here
